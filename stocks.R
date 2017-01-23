@@ -5,7 +5,6 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(dplyr)
-source("z_theme.r")
 
 # The following data source:
 sp500<-read.csv("stocks.csv", stringsAsFactors=FALSE) %>%
@@ -19,19 +18,31 @@ sp500_act<-sp500 %>% filter(Date >= '1923-01-01')
 
 #Calculate real returns (Reinvested dividends)
 
-sp500_act$real.return <- 1 # Start with initial conditions. I invest one dollar at the beginning of the stock market.
+sp500_act$real_monthly_return <- 1 # Start with initial conditions. I invest one dollar at the beginning of the stock market.
 sp500_act_now <- sp500_act[2:nrow(sp500_act),]
 sp500_act_lag <- sp500_act[1:nrow(sp500_act)-1,]
 
-sp500_act$real.return[2:nrow(sp500_act)] <- 
+sp500_act$real_monthly_return[2:nrow(sp500_act)] <- 
   # Start with previous value
-  sp500_act_lag$real.return * 
+  sp500_act_lag$real_monthly_return * 
   # Multiply it by the % change in stock value in the last month
   (((sp500_act_now$Real.Price-sp500_act_lag$Real.Price)/
       (sp500_act_lag$Real.Price))+1) +
   # Finally, add last month's dividends to the party; they get reinvested
   (sp500_act_lag$Real.Dividend/sp500_act_lag$Real.Price)*
-  (sp500_act_lag$real.return/12)
+  (sp500_act_lag$real_monthly_return/12)
+
+sp500_act <- sp500_act %>%
+  mutate(real_return = cumprod(real_monthly_return))
+
+#Plot real returns
+
+ggplot(sp500_act,aes(x=Date,y=real_return),na.rm=T)+
+  geom_path(color="black",alpha=1)+
+  labs(title="Returns After Investing",
+       x="Month",
+       y="Cash Multiplier (After Inflation and Dividends)")
+
 
 # Master Loop
 # If you're not regenerating the source data, uncomment this part
